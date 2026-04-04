@@ -41,6 +41,8 @@
   .corner-br { bottom: 8px; right: 8px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
 
   .scan-label { color: rgba(255,255,255,0.8); font-size: 15px; letter-spacing: 1px; animation: shimmer 2s infinite; }
+  .flip-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 18px; border-radius: 20px; font-size: 13px; cursor: pointer; margin-top: 4px; }
+  .flip-btn:hover { background: rgba(255,255,255,0.25); }
 
   .result-box { width: 100%; border-radius: 14px; padding: 1.5rem; text-align: center; animation: slideUp 0.4s ease; display: none; }
   .result-box.approved { background: rgba(34,197,94,0.2); border: 2px solid #22c55e; }
@@ -112,6 +114,7 @@
       <div class="corner corner-br"></div>
     </div>
     <div class="scan-label" id="scan-label">📷 Ուղղեք տեսախցիկը QR կոդին</div>
+    <button class="flip-btn" onclick="flipCamera()">🔄 Փոխել տեսախցիկը</button>
   </div>
 
   <div class="result-box" id="result-box">
@@ -161,6 +164,8 @@ const students = {};
 let scanning = true;
 let lastScan = '';
 let lastScanTime = 0;
+let facingMode = 'user';
+let currentStream = null;
 
 function makeStars() {
   const c = document.getElementById('stars');
@@ -281,32 +286,44 @@ function processQR(data) {
 
 async function startCamera() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    currentStream = stream;
     const video = document.getElementById('video');
     video.srcObject = stream;
     video.play();
-    requestAnimationFrame(tick);
   } catch(e) {
     document.getElementById('scan-label').textContent = '⚠ Տեսախցիկ հասանելի չէ';
   }
+}
+
+async function flipCamera() {
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  await startCamera();
 }
 
 function tick() {
   const video = document.getElementById('video');
   const canvas = document.getElementById('scan-canvas');
   if (video.readyState === video.HAVE_ENOUGH_DATA && scanning) {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+    const offsetX = (video.videoWidth - size) / 2;
+    const offsetY = (video.videoHeight - size) / 2;
+    ctx.drawImage(video, offsetX, offsetY, size, size, 0, 0, size, size);
+    const img = ctx.getImageData(0, 0, size, size);
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
     if (code) processQR(code.data);
   }
-  requestAnimationFrame(tick);
+  setTimeout(() => requestAnimationFrame(tick), 100);
 }
 
 startCamera();
+requestAnimationFrame(tick);
 </script>
 </body>
 </html>
