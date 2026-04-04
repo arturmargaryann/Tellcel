@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Մուտքի Հաստատում</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', serif; background: #1a3a6b; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+
+  .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  .star { position: absolute; background: white; border-radius: 50%; animation: twinkle 3s infinite alternate; }
+
+  @keyframes twinkle { from { opacity: 0.2; } to { opacity: 0.8; } }
+  @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); } 50% { box-shadow: 0 0 0 20px rgba(255,255,255,0); } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+  .header { position: relative; z-index: 1; text-align: center; padding: 2rem 1rem 1rem; }
+  .school-icon { font-size: 48px; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)); }
+  .school-title { color: #ffd700; font-size: 22px; font-weight: bold; letter-spacing: 2px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+  .school-sub { color: rgba(255,255,255,0.7); font-size: 13px; margin-top: 4px; letter-spacing: 1px; }
+
+  .main { position: relative; z-index: 1; width: 100%; max-width: 500px; padding: 1rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+
+  .scanner-box { background: rgba(255,255,255,0.08); border: 2px solid rgba(255,215,0,0.4); border-radius: 16px; padding: 1.5rem; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem; backdrop-filter: blur(10px); }
+
+  .video-wrapper { position: relative; width: 280px; height: 280px; border-radius: 12px; overflow: hidden; border: 3px solid rgba(255,215,0,0.6); animation: pulse 2s infinite; }
+  video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  canvas#scan-canvas { display: none; }
+
+  .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, #ffd700, transparent); animation: scan 2s linear infinite; }
+  @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+  .corner { position: absolute; width: 24px; height: 24px; border-color: #ffd700; border-style: solid; }
+  .corner-tl { top: 8px; left: 8px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .corner-tr { top: 8px; right: 8px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .corner-bl { bottom: 8px; left: 8px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .corner-br { bottom: 8px; right: 8px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+  .scan-label { color: rgba(255,255,255,0.8); font-size: 15px; letter-spacing: 1px; animation: shimmer 2s infinite; }
+
+  .result-box { width: 100%; border-radius: 14px; padding: 1.5rem; text-align: center; animation: slideUp 0.4s ease; display: none; }
+  .result-box.approved { background: rgba(34,197,94,0.2); border: 2px solid #22c55e; }
+  .result-box.rejected { background: rgba(239,68,68,0.2); border: 2px solid #ef4444; }
+
+  .result-icon { font-size: 52px; margin-bottom: 0.5rem; }
+  .result-status { font-size: 22px; font-weight: bold; letter-spacing: 2px; margin-bottom: 0.5rem; }
+  .approved .result-status { color: #86efac; }
+  .rejected .result-status { color: #fca5a5; }
+  .result-name { color: white; font-size: 26px; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.4); margin-bottom: 0.3rem; }
+  .result-detail { color: rgba(255,255,255,0.6); font-size: 13px; }
+
+  .illustrations { position: relative; z-index: 1; width: 100%; max-width: 500px; padding: 0 1rem 1rem; }
+  .illus-label { color: rgba(255,255,255,0.5); text-align: center; font-size: 12px; letter-spacing: 2px; margin-bottom: 1rem; text-transform: uppercase; }
+
+  .illus-row { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+  .illus-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .illus-img { width: 70px; height: 70px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,215,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 32px; }
+  .illus-text { color: rgba(255,255,255,0.5); font-size: 11px; text-align: center; }
+
+  .admin-toggle { position: fixed; bottom: 20px; right: 20px; z-index: 100; background: rgba(255,215,0,0.2); border: 1px solid rgba(255,215,0,0.5); color: #ffd700; padding: 8px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; letter-spacing: 1px; }
+  .admin-toggle:hover { background: rgba(255,215,0,0.3); }
+
+  .admin-panel { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .admin-panel.open { display: flex; }
+  .admin-card { background: #1e2d4a; border: 2px solid rgba(255,215,0,0.4); border-radius: 16px; padding: 2rem; width: 90%; max-width: 420px; max-height: 80vh; overflow-y: auto; }
+  .admin-title { color: #ffd700; font-size: 18px; margin-bottom: 1.5rem; text-align: center; letter-spacing: 1px; }
+  .admin-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .admin-input { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px 12px; color: white; font-size: 14px; outline: none; }
+  .admin-input:focus { border-color: #ffd700; }
+  .admin-input::placeholder { color: rgba(255,255,255,0.3); }
+  .admin-btn { background: rgba(255,215,0,0.2); border: 1px solid #ffd700; color: #ffd700; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; }
+  .admin-btn:hover { background: rgba(255,215,0,0.35); }
+  .admin-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 8px; }
+  .admin-list-item { background: rgba(255,255,255,0.07); border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .admin-list-name { color: white; font-size: 14px; }
+  .admin-list-id { color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 2px; }
+  .admin-list-qr { color: #ffd700; font-size: 11px; cursor: pointer; text-decoration: underline; }
+  .admin-close { width: 100%; margin-top: 1.5rem; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .admin-close:hover { background: rgba(239,68,68,0.3); }
+
+  .qr-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 300; display: none; align-items: center; justify-content: center; }
+  .qr-modal.open { display: flex; }
+  .qr-card { background: white; border-radius: 16px; padding: 2rem; text-align: center; max-width: 320px; width: 90%; }
+  .qr-name { font-size: 18px; font-weight: bold; color: #1a3a6b; margin-bottom: 1rem; }
+  .qr-canvas { margin: 0 auto; display: block; }
+  .qr-close-btn { margin-top: 1rem; background: #1a3a6b; color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="header">
+  <div class="school-icon">🏫</div>
+  <div class="school-title">ՄՈՒՏՔԻ ՀԱՍՏԱՏՈՒՄ</div>
+  <div class="school-sub">Սկանավորեք ձեր QR կոդը</div>
+</div>
+
+<div class="main">
+  <div class="scanner-box">
+    <div class="video-wrapper" id="video-wrapper">
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="scan-canvas"></canvas>
+      <div class="scan-line"></div>
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+    </div>
+    <div class="scan-label" id="scan-label">📷 Ուղղեք տեսախցիկը QR կոդին</div>
+  </div>
+
+  <div class="result-box" id="result-box">
+    <div class="result-icon" id="result-icon"></div>
+    <div class="result-status" id="result-status"></div>
+    <div class="result-name" id="result-name"></div>
+    <div class="result-detail" id="result-detail"></div>
+  </div>
+</div>
+
+<div class="illustrations">
+  <div class="illus-label">Բարի գալուստ</div>
+  <div class="illus-row">
+    <div class="illus-item"><div class="illus-img">📚</div><div class="illus-text">Գիտելիք</div></div>
+    <div class="illus-item"><div class="illus-img">🎓</div><div class="illus-text">Կրթություն</div></div>
+    <div class="illus-item"><div class="illus-img">✏️</div><div class="illus-text">Ստեղծագործ</div></div>
+    <div class="illus-item"><div class="illus-img">🌟</div><div class="illus-text">Հաջողություն</div></div>
+    <div class="illus-item"><div class="illus-img">🔬</div><div class="illus-text">Գիտություն</div></div>
+  </div>
+</div>
+
+<button class="admin-toggle" onclick="openAdmin()">⚙ Ադմին</button>
+
+<div class="admin-panel" id="admin-panel">
+  <div class="admin-card">
+    <div class="admin-title">⚙ Ադմինի Կառավարում</div>
+    <div class="admin-row">
+      <input class="admin-input" id="input-name" placeholder="Անուն Ազգանուն" />
+      <button class="admin-btn" onclick="addStudent()">+ Ավելացնել</button>
+    </div>
+    <div class="admin-list" id="admin-list"></div>
+    <button class="admin-close" onclick="closeAdmin()">Փակել</button>
+  </div>
+</div>
+
+<div class="qr-modal" id="qr-modal">
+  <div class="qr-card">
+    <div class="qr-name" id="qr-modal-name"></div>
+    <canvas class="qr-canvas" id="qr-canvas" width="200" height="200"></canvas>
+    <button class="qr-close-btn" onclick="closeQR()">Փակել</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const students = {};
+let scanning = true;
+let lastScan = '';
+let lastScanTime = 0;
+
+function makeStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 60; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random() * 2.5 + 0.5;
+    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*2}s`;
+    c.appendChild(s);
+  }
+}
+makeStars();
+
+function genId() {
+  return 'STU_' + Math.random().toString(36).substr(2,8).toUpperCase();
+}
+
+function addStudent() {
+  const name = document.getElementById('input-name').value.trim();
+  if (!name) return;
+  const id = genId();
+  students[id] = name;
+  document.getElementById('input-name').value = '';
+  renderList();
+}
+
+function renderList() {
+  const list = document.getElementById('admin-list');
+  list.innerHTML = '';
+  const keys = Object.keys(students);
+  if (!keys.length) { list.innerHTML = '<div style="color:rgba(255,255,255,0.3);text-align:center;font-size:13px;padding:1rem;">Դեռ ուսանող չկա</div>'; return; }
+  keys.forEach(id => {
+    const d = document.createElement('div');
+    d.className = 'admin-list-item';
+    d.innerHTML = `<div><div class="admin-list-name">${students[id]}</div><div class="admin-list-id">${id}</div></div><span class="admin-list-qr" onclick="showQR('${id}')">QR տեսնել</span>`;
+    list.appendChild(d);
+  });
+}
+
+function openAdmin() { document.getElementById('admin-panel').classList.add('open'); renderList(); }
+function closeAdmin() { document.getElementById('admin-panel').classList.remove('open'); }
+
+function showQR(id) {
+  document.getElementById('qr-modal-name').textContent = students[id];
+  const c = document.getElementById('qr-canvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, 200, 200);
+  document.getElementById('qr-modal').classList.add('open');
+
+  const div = document.createElement('div');
+  div.style.display = 'none';
+  document.body.appendChild(div);
+  new QRCode(div, { text: id, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
+  setTimeout(() => {
+    const img = div.querySelector('img') || div.querySelector('canvas');
+    if (img) {
+      const tmp = new Image();
+      tmp.onload = () => { ctx.drawImage(tmp, 0, 0, 200, 200); };
+      tmp.src = img.tagName === 'CANVAS' ? img.toDataURL() : img.src;
+    }
+    document.body.removeChild(div);
+  }, 300);
+}
+
+function closeQR() { document.getElementById('qr-modal').classList.remove('open'); }
+
+function playSound(type) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  if (type === 'approved') {
+    o.frequency.setValueAtTime(523, ctx.currentTime);
+    o.frequency.setValueAtTime(659, ctx.currentTime + 0.15);
+    o.frequency.setValueAtTime(784, ctx.currentTime + 0.3);
+    g.gain.setValueAtTime(0.4, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    o.start(); o.stop(ctx.currentTime + 0.8);
+  } else {
+    o.frequency.setValueAtTime(300, ctx.currentTime);
+    o.frequency.setValueAtTime(200, ctx.currentTime + 0.2);
+    g.gain.setValueAtTime(0.4, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    o.start(); o.stop(ctx.currentTime + 0.6);
+  }
+}
+
+function showResult(type, name) {
+  const box = document.getElementById('result-box');
+  box.className = 'result-box ' + type;
+  box.style.display = 'block';
+  if (type === 'approved') {
+    document.getElementById('result-icon').textContent = '✅';
+    document.getElementById('result-status').textContent = 'ՀԱՍՏԱՏՎԱԾ Է';
+    document.getElementById('result-name').textContent = name;
+    document.getElementById('result-detail').textContent = 'Բարի գալուստ դպրոց';
+  } else {
+    document.getElementById('result-icon').textContent = '❌';
+    document.getElementById('result-status').textContent = 'ՄԵՐԺՎԱԾ Է';
+    document.getElementById('result-name').textContent = 'Անհայտ QR կոդ';
+    document.getElementById('result-detail').textContent = 'Կապվեք ադմինիստրատորի հետ';
+  }
+  playSound(type);
+  setTimeout(() => { box.style.display = 'none'; scanning = true; }, 4000);
+}
+
+function processQR(data) {
+  const now = Date.now();
+  if (data === lastScan && now - lastScanTime < 5000) return;
+  lastScan = data; lastScanTime = now;
+  scanning = false;
+  if (students[data]) {
+    showResult('approved', students[data]);
+  } else {
+    showResult('rejected', '');
+  }
+}
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    video.play();
+    requestAnimationFrame(tick);
+  } catch(e) {
+    document.getElementById('scan-label').textContent = '⚠ Տեսախցիկ հասանելի չէ';
+  }
+}
+
+function tick() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('scan-canvas');
+  if (video.readyState === video.HAVE_ENOUGH_DATA && scanning) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+    if (code) processQR(code.data);
+  }
+  requestAnimationFrame(tick);
+}
+
+startCamera();
+</script>
+</body>
+</html>
