@@ -131,7 +131,7 @@
     <div class="illus-item"><div class="illus-img">📚</div><div class="illus-text">Գիտելիք</div></div>
     <div class="illus-item"><div class="illus-img">🎓</div><div class="illus-text">Կրթություն</div></div>
     <div class="illus-item"><div class="illus-img">✏️</div><div class="illus-text">Ստեղծագործ</div></div>
-    <div class="illus-item"><div class="illus-img">🌟</div><div class="illus-text">Հաջողություն</div></div>
+    <div class="illus-item"><div class="illus-img">🌟</div><div class="illus-text">Վիզուալիություն</div></div>
     <div class="illus-item"><div class="illus-img">🔬</div><div class="illus-text">Գիտություն</div></div>
   </div>
 </div>
@@ -284,47 +284,23 @@ function processQR(data) {
   }
 }
 
+const video = document.getElementById('video');
+const canvas = document.getElementById('scan-canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const lbl = document.getElementById('scan-label');
+
 async function startCamera() {
   try {
-    if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); }
-    const constraints = { video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } } };
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facingMode } }
+    });
     currentStream = stream;
-    const video = document.getElementById('video');
     video.srcObject = stream;
-    await video.play();
-    startZXing();
+    video.play();
   } catch(e) {
-    document.getElementById('scan-label').textContent = '⚠ Տեսախցիկ հասանելի չէ: ' + e.message;
+    lbl.textContent = '⚠ Սխալ: ' + e.message;
   }
-}
-
-let zxingReader = null;
-function startZXing() {
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('scan-canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-  function scanFrame() {
-    if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      if (scanning) {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'attemptBoth'
-        });
-        if (code && code.data) {
-          processQR(code.data);
-        } else {
-          document.getElementById('scan-label').textContent = '📷 Փնտրում եմ QR... (' + canvas.width + 'x' + canvas.height + ')';
-        }
-      }
-    }
-    requestAnimationFrame(scanFrame);
-  }
-  video.addEventListener('playing', () => requestAnimationFrame(scanFrame));
 }
 
 async function flipCamera() {
@@ -332,7 +308,36 @@ async function flipCamera() {
   await startCamera();
 }
 
-startCamera();
+async function scanLoop() {
+  if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0 && scanning) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    let found = false;
+
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        const codes = await detector.detect(canvas);
+        if (codes.length > 0) { processQR(codes[0].rawValue); found = true; }
+      } catch(e) {}
+    }
+
+    if (!found) {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+      if (code && code.data) { processQR(code.data); found = true; }
+    }
+
+    if (!found) lbl.textContent = '📷 Ուղղեք QR կոդին (' + canvas.width + 'x' + canvas.height + ')';
+  }
+  setTimeout(() => requestAnimationFrame(scanLoop), 200);
+}
+
+startCamera().then(() => {
+  video.addEventListener('playing', () => requestAnimationFrame(scanLoop), { once: true });
+});
 </script>
 </body>
 </html>
