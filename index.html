@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Մուտքի Հաստատում</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Georgia', serif; background: #1a3a6b; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
@@ -130,7 +130,7 @@
   <div class="illus-row">
     <div class="illus-item"><div class="illus-img">📚</div><div class="illus-text">Գիտելիք</div></div>
     <div class="illus-item"><div class="illus-img">🎓</div><div class="illus-text">Կրթություն</div></div>
-    <div class="illus-item"><div class="illus-img">✏️</div><div class="illus-text">Ստեղծագործ</div></div>
+    <div class="illus-item"><div class="illus-img">✏️</div><div class="illus-text">Վիզուակիություն</div></div>
     <div class="illus-item"><div class="illus-img">🌟</div><div class="illus-text">Հաջողություն</div></div>
     <div class="illus-item"><div class="illus-img">🔬</div><div class="illus-text">Գիտություն</div></div>
   </div>
@@ -287,16 +287,46 @@ function processQR(data) {
 async function startCamera() {
   try {
     if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
+    const constraints = { video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } } };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
     const video = document.getElementById('video');
     video.srcObject = stream;
-    video.play();
+    await video.play();
+    startZXing();
   } catch(e) {
-    document.getElementById('scan-label').textContent = '⚠ Տեսախցիկ հասանելի չէ';
+    document.getElementById('scan-label').textContent = '⚠ Տեսախցիկ հասանելի չէ: ' + e.message;
   }
+}
+
+let zxingReader = null;
+function startZXing() {
+  if (zxingReader) { try { zxingReader.reset(); } catch(e) {} }
+  const hints = new Map();
+  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('scan-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function scanFrame() {
+    if (!scanning) { requestAnimationFrame(scanFrame); return; }
+    if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      try {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const luminance = new ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
+        const binary = new ZXing.HybridBinarizer(luminance);
+        const bitmap = new ZXing.BinaryBitmap(binary);
+        const result = zxingReader.decodeBitmap(bitmap);
+        if (result) processQR(result.getText());
+      } catch(e) {}
+    }
+    requestAnimationFrame(scanFrame);
+  }
+  requestAnimationFrame(scanFrame);
 }
 
 async function flipCamera() {
@@ -304,26 +334,7 @@ async function flipCamera() {
   await startCamera();
 }
 
-function tick() {
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('scan-canvas');
-  if (video.readyState === video.HAVE_ENOUGH_DATA && scanning) {
-    const size = Math.min(video.videoWidth, video.videoHeight);
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    const offsetX = (video.videoWidth - size) / 2;
-    const offsetY = (video.videoHeight - size) / 2;
-    ctx.drawImage(video, offsetX, offsetY, size, size, 0, 0, size, size);
-    const img = ctx.getImageData(0, 0, size, size);
-    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
-    if (code) processQR(code.data);
-  }
-  setTimeout(() => requestAnimationFrame(tick), 100);
-}
-
 startCamera();
-requestAnimationFrame(tick);
 </script>
 </body>
 </html>
