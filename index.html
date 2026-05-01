@@ -1,343 +1,611 @@
 <!DOCTYPE html>
 <html lang="hy">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Մուտքի Հաստատում</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Գրադարան · Կառավարման Համակարգ</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Georgia', serif; background: #1a3a6b; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
-
-  .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-  .star { position: absolute; background: white; border-radius: 50%; animation: twinkle 3s infinite alternate; }
-
-  @keyframes twinkle { from { opacity: 0.2; } to { opacity: 0.8; } }
-  @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
-  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); } 50% { box-shadow: 0 0 0 20px rgba(255,255,255,0); } }
-  @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
-
-  .header { position: relative; z-index: 1; text-align: center; padding: 2rem 1rem 1rem; }
-  .school-icon { font-size: 48px; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)); }
-  .school-title { color: #ffd700; font-size: 22px; font-weight: bold; letter-spacing: 2px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
-  .school-sub { color: rgba(255,255,255,0.7); font-size: 13px; margin-top: 4px; letter-spacing: 1px; }
-
-  .main { position: relative; z-index: 1; width: 100%; max-width: 500px; padding: 1rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
-
-  .scanner-box { background: rgba(255,255,255,0.08); border: 2px solid rgba(255,215,0,0.4); border-radius: 16px; padding: 1.5rem; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem; backdrop-filter: blur(10px); }
-
-  .video-wrapper { position: relative; width: 280px; height: 280px; border-radius: 12px; overflow: hidden; border: 3px solid rgba(255,215,0,0.6); animation: pulse 2s infinite; }
-  video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  canvas#scan-canvas { display: none; }
-
-  .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, #ffd700, transparent); animation: scan 2s linear infinite; }
-  @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-
-  .corner { position: absolute; width: 24px; height: 24px; border-color: #ffd700; border-style: solid; }
-  .corner-tl { top: 8px; left: 8px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
-  .corner-tr { top: 8px; right: 8px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
-  .corner-bl { bottom: 8px; left: 8px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
-  .corner-br { bottom: 8px; right: 8px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
-
-  .scan-label { color: rgba(255,255,255,0.8); font-size: 15px; letter-spacing: 1px; animation: shimmer 2s infinite; }
-  .flip-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 18px; border-radius: 20px; font-size: 13px; cursor: pointer; margin-top: 4px; }
-  .flip-btn:hover { background: rgba(255,255,255,0.25); }
-
-  .result-box { width: 100%; border-radius: 14px; padding: 1.5rem; text-align: center; animation: slideUp 0.4s ease; display: none; }
-  .result-box.approved { background: rgba(34,197,94,0.2); border: 2px solid #22c55e; }
-  .result-box.rejected { background: rgba(239,68,68,0.2); border: 2px solid #ef4444; }
-
-  .result-icon { font-size: 52px; margin-bottom: 0.5rem; }
-  .result-status { font-size: 22px; font-weight: bold; letter-spacing: 2px; margin-bottom: 0.5rem; }
-  .approved .result-status { color: #86efac; }
-  .rejected .result-status { color: #fca5a5; }
-  .result-name { color: white; font-size: 26px; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.4); margin-bottom: 0.3rem; }
-  .result-detail { color: rgba(255,255,255,0.6); font-size: 13px; }
-
-  .illustrations { position: relative; z-index: 1; width: 100%; max-width: 500px; padding: 0 1rem 1rem; }
-  .illus-label { color: rgba(255,255,255,0.5); text-align: center; font-size: 12px; letter-spacing: 2px; margin-bottom: 1rem; text-transform: uppercase; }
-
-  .illus-row { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
-  .illus-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .illus-img { width: 70px; height: 70px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,215,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 32px; }
-  .illus-text { color: rgba(255,255,255,0.5); font-size: 11px; text-align: center; }
-
-  .admin-toggle { position: fixed; bottom: 20px; right: 20px; z-index: 100; background: rgba(255,215,0,0.2); border: 1px solid rgba(255,215,0,0.5); color: #ffd700; padding: 8px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; letter-spacing: 1px; }
-  .admin-toggle:hover { background: rgba(255,215,0,0.3); }
-
-  .admin-panel { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; }
-  .admin-panel.open { display: flex; }
-  .admin-card { background: #1e2d4a; border: 2px solid rgba(255,215,0,0.4); border-radius: 16px; padding: 2rem; width: 90%; max-width: 420px; max-height: 80vh; overflow-y: auto; }
-  .admin-title { color: #ffd700; font-size: 18px; margin-bottom: 1.5rem; text-align: center; letter-spacing: 1px; }
-  .admin-row { display: flex; gap: 8px; margin-bottom: 12px; }
-  .admin-input { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px 12px; color: white; font-size: 14px; outline: none; }
-  .admin-input:focus { border-color: #ffd700; }
-  .admin-input::placeholder { color: rgba(255,255,255,0.3); }
-  .admin-btn { background: rgba(255,215,0,0.2); border: 1px solid #ffd700; color: #ffd700; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; }
-  .admin-btn:hover { background: rgba(255,215,0,0.35); }
-  .admin-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 8px; }
-  .admin-list-item { background: rgba(255,255,255,0.07); border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
-  .admin-list-name { color: white; font-size: 14px; }
-  .admin-list-id { color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 2px; }
-  .admin-list-qr { color: #ffd700; font-size: 11px; cursor: pointer; text-decoration: underline; }
-  .admin-close { width: 100%; margin-top: 1.5rem; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-  .admin-close:hover { background: rgba(239,68,68,0.3); }
-
-  .qr-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 300; display: none; align-items: center; justify-content: center; }
-  .qr-modal.open { display: flex; }
-  .qr-card { background: white; border-radius: 16px; padding: 2rem; text-align: center; max-width: 320px; width: 90%; }
-  .qr-name { font-size: 18px; font-weight: bold; color: #1a3a6b; margin-bottom: 1rem; }
-  .qr-canvas { margin: 0 auto; display: block; }
-  .qr-close-btn { margin-top: 1rem; background: #1a3a6b; color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1A1208;--paper:#F6F0E4;--parchment:#EDE5D0;--forest:#1C3A28;--forest-light:#2A5239;
+  --gold:#B8860B;--gold-light:#D4A017;--cream:#FDF8EE;--muted:#7A6A50;
+  --red:#8B2020;--green:#1A5C35;--amber:#7A5200;
+  --border:#D4C9A8;--shadow:rgba(28,58,40,0.08);
+}
+html,body{height:100%;background:var(--paper);color:var(--ink);font-family:'Crimson Pro',Georgia,serif}
+/* Layout */
+.app{display:flex;height:100vh;overflow:hidden}
+/* Sidebar */
+.sidebar{width:230px;background:var(--forest);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.logo{padding:28px 22px 22px;border-bottom:1px solid rgba(255,255,255,0.07)}
+.logo-title{font-family:'Playfair Display',serif;color:#E8D8A0;font-size:19px;font-weight:700;line-height:1.3}
+.logo-sub{color:rgba(232,216,160,0.45);font-size:10.5px;letter-spacing:1px;margin-top:4px;text-transform:uppercase}
+.nav{padding:14px 10px;flex:1}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:none;background:transparent;
+  color:rgba(232,216,160,0.6);font-family:'Crimson Pro',serif;font-size:14px;border-radius:7px;
+  cursor:pointer;transition:all .15s;text-align:left;margin-bottom:2px}
+.nav-btn:hover{background:rgba(255,255,255,0.06);color:#E8D8A0}
+.nav-btn.active{background:rgba(232,216,160,0.12);color:#E8D8A0;font-weight:500}
+.nav-icon{width:16px;height:16px;flex-shrink:0;opacity:.75}
+/* Main */
+.main{flex:1;overflow-y:auto;padding:32px 38px;background:var(--paper)}
+.page{display:none}.page.active{display:block}
+/* Header */
+.page-header{margin-bottom:24px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-family:'Playfair Display',serif;font-size:25px;color:var(--forest);font-weight:700}
+.page-sub{color:var(--muted);font-size:13.5px;margin-top:3px}
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat{background:var(--cream);border:1px solid var(--border);border-radius:11px;padding:15px 18px}
+.stat-label{font-size:10.5px;color:#9C8B6A;letter-spacing:.6px;text-transform:uppercase;margin-bottom:5px}
+.stat-value{font-family:'Playfair Display',serif;font-size:30px;color:var(--forest);line-height:1}
+.stat-note{font-size:12px;color:#B0A080;margin-top:4px}
+/* Card */
+.card{background:var(--cream);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-bottom:20px}
+.card-hd{padding:14px 20px;border-bottom:1px solid var(--parchment);display:flex;align-items:center;justify-content:space-between}
+.card-hd h3{font-size:14.5px;font-weight:600;color:var(--ink)}
+/* Table */
+.tbl-head,.tbl-row{display:grid;padding:10px 20px;align-items:center;font-size:13.5px}
+.tbl-head{background:var(--parchment);font-size:10.5px;color:#9C8B6A;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.tbl-row{border-bottom:1px solid #F0E8D5;transition:background .1s}
+.tbl-row:last-child{border-bottom:none}
+.tbl-row:hover{background:#FDFAF2}
+/* Search */
+.search-wrap{display:flex;align-items:center;gap:8px;margin:14px 20px;background:var(--parchment);
+  border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+.search-wrap input{border:none;background:transparent;outline:none;font-family:'Crimson Pro',serif;
+  font-size:13.5px;color:var(--ink);width:100%}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:8px;
+  border:none;cursor:pointer;font-family:'Crimson Pro',serif;font-size:13.5px;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--forest);color:#E8D8A0}.btn-primary:hover{background:var(--forest-light)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#164D2C}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-ghost:hover{background:var(--parchment)}
+/* Badge */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.bg{background:#E8F0EB;color:#1A5C35}.br{background:#F5E8E8;color:#8B2020}.ba{background:#FFF3DC;color:#7A5200}.bk{background:#EDE8DC;color:#6A5A40}
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(10,20,10,.45);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--cream);border-radius:14px;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto;
+  transform:translateY(10px);transition:transform .2s;border:1px solid var(--border)}
+.overlay.open .modal{transform:translateY(0)}
+.modal-hd{padding:20px 24px 14px;border-bottom:1px solid var(--parchment);display:flex;align-items:center;justify-content:space-between}
+.modal-hd h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--forest)}
+.modal-bd{padding:18px 24px}
+.modal-ft{padding:14px 24px;border-top:1px solid var(--parchment);display:flex;justify-content:flex-end;gap:8px}
+.close-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1}
+/* Form */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.fi{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:7px;
+  font-family:'Crimson Pro',serif;font-size:13.5px;color:var(--ink);background:#FDFAF7;outline:none;transition:border-color .15s}
+.fi:focus{border-color:var(--forest);background:#fff}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+/* AI area */
+.ai-box{background:linear-gradient(135deg,#EDF5F0,#E4EFE9);border:1px solid #B8D4C5;border-radius:10px;
+  padding:14px 16px;font-size:13.5px;color:#2A4A38;line-height:1.65;min-height:72px;white-space:pre-wrap}
+.ai-spin{color:#5A8A70;font-style:italic;font-size:13px}
+/* Quick actions */
+.qa-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 14px;
+  border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;
+  font-family:'Crimson Pro',serif;font-size:13.5px;color:var(--ink);transition:all .15s;margin-bottom:7px;text-align:left}
+.qa-btn:hover{background:var(--parchment);border-color:#C4B898}
+/* Empty */
+.empty{text-align:center;padding:44px 20px;color:#B0A080;font-size:14px}
+/* Dashboard two-col */
+.dash-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* Info box */
+.info-box{background:var(--parchment);border-radius:8px;padding:9px 13px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.warn-box{background:#FBF0F0;border:1px solid #ECC;border-radius:8px;padding:9px 13px;font-size:12.5px;color:var(--red);margin-top:8px}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#C0B494;border-radius:4px}
 </style>
 </head>
 <body>
+<div class="app">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">📚 Գրադարան</div>
+    <div class="logo-sub">Կառ. Համակարգ</div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="go('dashboard',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Վահանակ
+    </button>
+    <button class="nav-btn" onclick="go('books',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Գրքեր
+    </button>
+    <button class="nav-btn" onclick="go('members',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Անդամներ
+    </button>
+    <button class="nav-btn" onclick="go('borrowings',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/></svg>
+      Վարձույթ
+    </button>
+    <button class="nav-btn" onclick="go('recommend',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      AI Խորհուրդ
+    </button>
+  </nav>
+</aside>
 
-<div class="stars" id="stars"></div>
+<!-- MAIN -->
+<main class="main">
 
-<div class="header">
-  <div class="school-icon">🏫</div>
-  <div class="school-title">ՄՈՒՏՔԻ ՀԱՍՏԱՏՈՒՄ</div>
-  <div class="school-sub">Սկանավորեք ձեր QR կոդը</div>
-</div>
-
-<div class="main">
-  <div class="scanner-box">
-    <div class="video-wrapper" id="video-wrapper">
-      <video id="video" playsinline autoplay muted></video>
-      <canvas id="scan-canvas"></canvas>
-      <div class="scan-line"></div>
-      <div class="corner corner-tl"></div>
-      <div class="corner corner-tr"></div>
-      <div class="corner corner-bl"></div>
-      <div class="corner corner-br"></div>
+<!-- DASHBOARD -->
+<section id="page-dashboard" class="page active">
+  <div class="page-header"><div>
+    <div class="page-title">Բարի Գալուստ</div>
+    <div class="page-sub">Ձեր գրադարանի ամփոփ վիճակը</div>
+  </div></div>
+  <div class="stat-grid" id="stats"></div>
+  <div class="dash-cols">
+    <div class="card">
+      <div class="card-hd"><h3>Ակտիվ վարձույթներ</h3></div>
+      <div id="dash-borrows"></div>
     </div>
-    <div class="scan-label" id="scan-label">📷 Ուղղեք տեսախցիկը QR կոդին</div>
-    <button class="flip-btn" onclick="flipCamera()">🔄 Փոխել տեսախցիկը</button>
-  </div>
-
-  <div class="result-box" id="result-box">
-    <div class="result-icon" id="result-icon"></div>
-    <div class="result-status" id="result-status"></div>
-    <div class="result-name" id="result-name"></div>
-    <div class="result-detail" id="result-detail"></div>
-  </div>
-</div>
-
-<div class="illustrations">
-  <div class="illus-label">Բարի գալուստ</div>
-  <div class="illus-row">
-    <div class="illus-item"><div class="illus-img">📚</div><div class="illus-text">Գիտելիք</div></div>
-    <div class="illus-item"><div class="illus-img">🎓</div><div class="illus-text">Կրթություն</div></div>
-    <div class="illus-item"><div class="illus-img">✏️</div><div class="illus-text">Ստեղծագործ</div></div>
-    <div class="illus-item"><div class="illus-img">🌟</div><div class="illus-text">Վիզուալիություն</div></div>
-    <div class="illus-item"><div class="illus-img">🔬</div><div class="illus-text">Գիտություն</div></div>
-  </div>
-</div>
-
-<button class="admin-toggle" onclick="openAdmin()">⚙ Ադմին</button>
-
-<div class="admin-panel" id="admin-panel">
-  <div class="admin-card">
-    <div class="admin-title">⚙ Ադմինի Կառավարում</div>
-    <div class="admin-row">
-      <input class="admin-input" id="input-name" placeholder="Անուն Ազգանուն" />
-      <button class="admin-btn" onclick="addStudent()">+ Ավելացնել</button>
+    <div class="card">
+      <div class="card-hd"><h3>Արագ գործողություններ</h3></div>
+      <div style="padding:14px">
+        <button class="qa-btn" onclick="openModal('m-add-book')">➕ Ավելացնել գիրք <span>›</span></button>
+        <button class="qa-btn" onclick="openModal('m-add-member')">👤 Գրանցել անդամ <span>›</span></button>
+        <button class="qa-btn" onclick="openModal('m-borrow')">📤 Տալ վարձույթ <span>›</span></button>
+        <button class="qa-btn" onclick="openModal('m-return')">📥 Ընդունել վերադարձ <span>›</span></button>
+      </div>
     </div>
-    <div class="admin-list" id="admin-list"></div>
-    <button class="admin-close" onclick="closeAdmin()">Փակել</button>
+  </div>
+</section>
+
+<!-- BOOKS -->
+<section id="page-books" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Գրքեր</div><div class="page-sub" id="book-sub"></div></div>
+    <button class="btn btn-primary" onclick="openModal('m-add-book')">+ Ավելացնել</button>
+  </div>
+  <div class="card">
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9C8B6A" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="book-search" placeholder="Փնտրել ըստ վերնագրի, հեղինակի, ժանրի…" oninput="renderBooks()"/>
+    </div>
+    <div class="tbl-head" style="grid-template-columns:2fr 1.5fr 1fr .5fr .5fr .8fr">
+      <span>Վերնագիր</span><span>Հեղինակ</span><span>Ժանր</span><span>Տարի</span><span>Ընդ.</span><span>Հասան.</span>
+    </div>
+    <div id="book-list"></div>
+  </div>
+</section>
+
+<!-- MEMBERS -->
+<section id="page-members" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Անդամներ</div><div class="page-sub" id="member-sub"></div></div>
+    <button class="btn btn-primary" onclick="openModal('m-add-member')">+ Գրանցել</button>
+  </div>
+  <div class="card">
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9C8B6A" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="member-search" placeholder="Փնտրել ըստ անուն, էլ. փոստ…" oninput="renderMembers()"/>
+    </div>
+    <div class="tbl-head" style="grid-template-columns:2fr 2fr 1.5fr 1fr 1fr">
+      <span>Անուն</span><span>Էլ. փոստ</span><span>Հեռախոս</span><span>Անդամ</span><span>Վարձ.</span>
+    </div>
+    <div id="member-list"></div>
+  </div>
+</section>
+
+<!-- BORROWINGS -->
+<section id="page-borrowings" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Վարձույթ</div><div class="page-sub" id="borrow-sub"></div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="openModal('m-borrow')">+ Տալ</button>
+      <button class="btn btn-success" onclick="openModal('m-return')">↩ Ընդունել</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="tbl-head" style="grid-template-columns:2fr 2fr 1fr 1fr 1fr">
+      <span>Գիրք</span><span>Անդամ</span><span>Վերցնելու</span><span>Վերջնաժամ</span><span>Կարգ.</span>
+    </div>
+    <div id="borrow-list"></div>
+  </div>
+</section>
+
+<!-- RECOMMEND -->
+<section id="page-recommend" class="page">
+  <div class="page-header"><div>
+    <div class="page-title">AI Խորհուրդ</div>
+    <div class="page-sub">Ընտրեք անդամ, AI-ն կխորհուրդ տա հայերեն</div>
+  </div></div>
+  <div class="card" style="max-width:540px">
+    <div style="padding:20px">
+      <div class="fg">
+        <label>Անդամ</label>
+        <select class="fi" id="rec-member" onchange="recChanged()">
+          <option value="">— Ընտրել անդամ —</option>
+        </select>
+      </div>
+      <div id="rec-history" class="info-box" style="display:none;margin-bottom:14px"></div>
+      <button class="btn btn-primary" onclick="getRecommendation()" id="rec-btn" style="margin-bottom:16px">✦ Ստանալ խորհուրդ</button>
+      <div id="rec-out" class="ai-box" style="display:none"></div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- MODALS -->
+
+<!-- Add Book -->
+<div class="overlay" id="m-add-book" onclick="closeIfBg(event,'m-add-book')">
+  <div class="modal">
+    <div class="modal-hd"><h3>Ավելացնել Գիրք</h3><button class="close-btn" onclick="closeModal('m-add-book')">✕</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label>Վերնագիր *</label><input class="fi" id="b-title" placeholder="Գրքի վերնագիրը"/></div>
+      <div class="fg"><label>Հեղինակ *</label><input class="fi" id="b-author" placeholder="Հեղինակի անունը"/></div>
+      <div class="fr">
+        <div class="fg"><label>Ժանր</label>
+          <select class="fi" id="b-genre">
+            <option value="">—</option>
+            <option>Վեպ</option><option>Պատմություն</option><option>Բանաստեղծություն</option>
+            <option>Գիտ. Ֆանտ.</option><option>Կենսագրություն</option><option>Ինքնաճանաչ.</option>
+            <option>Երեխ.</option><option>Փիլիսոփ.</option><option>Այլ</option>
+          </select>
+        </div>
+        <div class="fg"><label>Հրատ. Տարի</label><input class="fi" id="b-year" type="number" placeholder="2024"/></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>Օրինակների Քան.</label><input class="fi" id="b-copies" type="number" value="1" min="1"/></div>
+        <div class="fg"><label>ISBN</label><input class="fi" id="b-isbn" placeholder="978-…"/></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-add-book')">Չեղ.</button>
+      <button class="btn btn-primary" onclick="saveBook()">Պահել</button>
+    </div>
   </div>
 </div>
 
-<div class="qr-modal" id="qr-modal">
-  <div class="qr-card">
-    <div class="qr-name" id="qr-modal-name"></div>
-    <canvas class="qr-canvas" id="qr-canvas" width="200" height="200"></canvas>
-    <button class="qr-close-btn" onclick="closeQR()">Փակել</button>
+<!-- Add Member -->
+<div class="overlay" id="m-add-member" onclick="closeIfBg(event,'m-add-member')">
+  <div class="modal">
+    <div class="modal-hd"><h3>Գրանցել Անդամ</h3><button class="close-btn" onclick="closeModal('m-add-member')">✕</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label>Անուն Ազգանուն *</label><input class="fi" id="m-name" placeholder="Անի Հովհաննիսյան"/></div>
+      <div class="fg"><label>Էլ. Փոստ</label><input class="fi" id="m-email" type="email" placeholder="ani@example.am"/></div>
+      <div class="fg"><label>Հեռախոս</label><input class="fi" id="m-phone" placeholder="077 123456"/></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-add-member')">Չեղ.</button>
+      <button class="btn btn-primary" onclick="saveMember()">Գրանցել</button>
+    </div>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Borrow -->
+<div class="overlay" id="m-borrow" onclick="closeIfBg(event,'m-borrow')">
+  <div class="modal">
+    <div class="modal-hd"><h3>Տալ Վարձույթ</h3><button class="close-btn" onclick="closeModal('m-borrow')">✕</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label>Գիրք *</label>
+        <select class="fi" id="bw-book">
+          <option value="">— Ընտրել —</option>
+        </select>
+      </div>
+      <div class="fg"><label>Անդամ *</label>
+        <select class="fi" id="bw-member">
+          <option value="">— Ընտրել —</option>
+        </select>
+      </div>
+      <div class="info-box">Վերջնաժամ՝ <strong id="bw-due"></strong> (14 օր)</div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-borrow')">Չեղ.</button>
+      <button class="btn btn-primary" onclick="saveBorrow()">Տալ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Return -->
+<div class="overlay" id="m-return" onclick="closeIfBg(event,'m-return')">
+  <div class="modal">
+    <div class="modal-hd"><h3>Ընդունել Վերադարձ</h3><button class="close-btn" onclick="closeModal('m-return')">✕</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label>Ընտրել Վարձույթ *</label>
+        <select class="fi" id="rt-borrow">
+          <option value="">— Ընտրել —</option>
+        </select>
+      </div>
+      <div id="rt-warn" style="display:none" class="warn-box">⚠ Ուշացած — Վերջնաժամն անցել է։</div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-return')">Չեղ.</button>
+      <button class="btn btn-success" onclick="doReturn()">✓ Ընդունել</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const students = {};
-let scanning = true;
-let lastScan = '';
-let lastScanTime = 0;
-let facingMode = 'user';
-let currentStream = null;
+// ── Data ──────────────────────────────────────────────────────────
+let books = [
+  {id:'b1',title:'Հայոց Պատմություն',author:'Թովմա Արծրունի',genre:'Պատմություն',year:1982,total:3,avail:3,isbn:'978-5-8103-0186-1'},
+  {id:'b2',title:'Mheri Durn',author:'Հովհ. Թումանյան',genre:'Բանաստեղծություն',year:1966,total:5,avail:4,isbn:'978-5-8499-0033-2'},
+  {id:'b3',title:'Խաղաղ Դոն',author:'Միխայիլ Շոլոխով',genre:'Վեպ',year:1975,total:2,avail:2,isbn:''},
+];
+let members = [
+  {id:'m1',name:'Անի Հովհաննիսյան',email:'ani@example.am',phone:'077 123456',joined:'2024-03-15'},
+  {id:'m2',name:'Արամ Պետրոսյան',email:'aram@example.am',phone:'093 654321',joined:'2024-05-20'},
+];
+let borrowings = [];
+let loaded = false;
 
-function makeStars() {
-  const c = document.getElementById('stars');
-  for (let i = 0; i < 60; i++) {
-    const s = document.createElement('div');
-    s.className = 'star';
-    const sz = Math.random() * 2.5 + 0.5;
-    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*2}s`;
-    c.appendChild(s);
-  }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function due14(){ const d=new Date(); d.setDate(d.getDate()+14); return d.toISOString().slice(0,10); }
+function fmtDate(s){ if(!s)return '—'; return new Date(s).toLocaleDateString('hy-AM',{day:'2-digit',month:'short',year:'numeric'}); }
+function isOverdue(due,ret){ return !ret && new Date(due)<new Date(); }
+function getBook(id){ return books.find(b=>b.id===id); }
+function getMember(id){ return members.find(m=>m.id===id); }
+function getBookTitle(id){ return getBook(id)?.title||'—'; }
+function getMemberName(id){ return getMember(id)?.name||'—'; }
+
+// Storage (localStorage)
+async function load(){
+  try{
+    const b=localStorage.getItem('h_books'); if(b) books=JSON.parse(b);
+    const m=localStorage.getItem('h_members'); if(m) members=JSON.parse(m);
+    const br=localStorage.getItem('h_borrowings'); if(br) borrowings=JSON.parse(br);
+  }catch(e){}
+  loaded=true; renderAll();
 }
-makeStars();
-
-function genId() {
-  return 'STU_' + Math.random().toString(36).substr(2,8).toUpperCase();
+function save(){
+  if(!loaded)return;
+  try{
+    localStorage.setItem('h_books',JSON.stringify(books));
+    localStorage.setItem('h_members',JSON.stringify(members));
+    localStorage.setItem('h_borrowings',JSON.stringify(borrowings));
+  }catch(e){}
 }
 
-function addStudent() {
-  const name = document.getElementById('input-name').value.trim();
-  if (!name) return;
-  const id = genId();
-  students[id] = name;
-  document.getElementById('input-name').value = '';
-  renderList();
+// ── Navigation ───────────────────────────────────────────────────
+function go(id, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderAll();
 }
 
-function renderList() {
-  const list = document.getElementById('admin-list');
-  list.innerHTML = '';
-  const keys = Object.keys(students);
-  if (!keys.length) { list.innerHTML = '<div style="color:rgba(255,255,255,0.3);text-align:center;font-size:13px;padding:1rem;">Դեռ ուսանող չկա</div>'; return; }
-  keys.forEach(id => {
-    const d = document.createElement('div');
-    d.className = 'admin-list-item';
-    d.innerHTML = `<div><div class="admin-list-name">${students[id]}</div><div class="admin-list-id">${id}</div></div><span class="admin-list-qr" onclick="showQR('${id}')">QR տեսնել</span>`;
-    list.appendChild(d);
+// ── Modals ───────────────────────────────────────────────────────
+function openModal(id){
+  if(id==='m-borrow') populateBorrowSelects();
+  if(id==='m-return') populateReturnSelect();
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function closeIfBg(e,id){ if(e.target===e.currentTarget) closeModal(id); }
+
+// ── Render All ───────────────────────────────────────────────────
+function renderAll(){
+  renderStats(); renderDashBorrows(); renderBooks(); renderMembers(); renderBorrowings();
+  renderRecMemberSelect(); updateBookSub(); updateMemberSub(); updateBorrowSub();
+}
+
+// Stats
+function renderStats(){
+  const total = books.reduce((s,b)=>s+b.total,0);
+  const active = borrowings.filter(b=>!b.returnDate);
+  const overdue = active.filter(b=>isOverdue(b.dueDate,b.returnDate));
+  document.getElementById('stats').innerHTML=[
+    {l:'Ընդամ. Վերնագիր',v:books.length,n:total+' օրինակ'},
+    {l:'Անդամներ',v:members.length,n:'Ակտիվ'},
+    {l:'Ակտիվ Վարձ.',v:active.length,n:'Ձեռքում'},
+    {l:'Ժամկետանց',v:overdue.length,n:'Ուշացած',warn:overdue.length>0},
+  ].map(s=>`<div class="stat"><div class="stat-label">${s.l}</div>
+    <div class="stat-value" style="color:${s.warn?'var(--red)':'var(--forest)'}">${s.v}</div>
+    <div class="stat-note">${s.n}</div></div>`).join('');
+}
+
+// Dash borrows
+function renderDashBorrows(){
+  const active = borrowings.filter(b=>!b.returnDate).slice(0,6);
+  const el = document.getElementById('dash-borrows');
+  if(!active.length){ el.innerHTML='<div class="empty">Վարձույթ չկա</div>'; return; }
+  el.innerHTML = active.map(b=>{
+    const over = isOverdue(b.dueDate,b.returnDate);
+    return `<div style="padding:10px 16px;border-bottom:1px solid #F0E8D5;font-size:13px">
+      <div style="font-weight:500;margin-bottom:2px">${getBookTitle(b.bookId)}</div>
+      <div style="color:#9C8B6A;display:flex;justify-content:space-between;align-items:center">
+        <span>${getMemberName(b.memberId)}</span>
+        <span class="badge ${over?'br':'ba'}">${over?'Ուշ':fmtDate(b.dueDate)}</span>
+      </div></div>`;
+  }).join('');
+}
+
+// Books
+function updateBookSub(){ document.getElementById('book-sub').textContent = books.length+' վերնագիր · '+books.reduce((s,b)=>s+b.total,0)+' ընդամ. օրինակ'; }
+function renderBooks(){
+  const q = (document.getElementById('book-search')?.value||'').toLowerCase();
+  const list = books.filter(b=>b.title.toLowerCase().includes(q)||b.author.toLowerCase().includes(q)||(b.genre||'').toLowerCase().includes(q));
+  const el = document.getElementById('book-list');
+  if(!list.length){ el.innerHTML='<div class="empty">Գրքեր չեն գտնվել</div>'; return; }
+  el.innerHTML = list.map(b=>{
+    const cls = b.avail===0?'br':b.avail<b.total?'ba':'bg';
+    return `<div class="tbl-row" style="grid-template-columns:2fr 1.5fr 1fr .5fr .5fr .8fr">
+      <span style="font-weight:500">${b.title}</span>
+      <span style="color:#5A4A38">${b.author}</span>
+      <span><span class="badge bk">${b.genre||'—'}</span></span>
+      <span style="color:#9C8B6A">${b.year||'—'}</span>
+      <span>${b.total}</span>
+      <span><span class="badge ${cls}">${b.avail}</span></span>
+    </div>`;
+  }).join('');
+}
+
+// Members
+function updateMemberSub(){ document.getElementById('member-sub').textContent = members.length+' գրանցված անդամ'; }
+function renderMembers(){
+  const q=(document.getElementById('member-search')?.value||'').toLowerCase();
+  const list=members.filter(m=>m.name.toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q));
+  const el=document.getElementById('member-list');
+  if(!list.length){ el.innerHTML='<div class="empty">Անդամներ չեն գտնվել</div>'; return; }
+  el.innerHTML=list.map(m=>{
+    const cnt=borrowings.filter(b=>b.memberId===m.id&&!b.returnDate).length;
+    return `<div class="tbl-row" style="grid-template-columns:2fr 2fr 1.5fr 1fr 1fr">
+      <span style="font-weight:500">${m.name}</span>
+      <span style="color:#7A8AA0">${m.email||'—'}</span>
+      <span style="color:var(--muted)">${m.phone||'—'}</span>
+      <span style="color:#9C8B6A;font-size:12px">${fmtDate(m.joined)}</span>
+      <span><span class="badge ${cnt>0?'ba':'bg'}">${cnt} գիրք</span></span>
+    </div>`;
+  }).join('');
+}
+
+// Borrowings
+function updateBorrowSub(){
+  const active=borrowings.filter(b=>!b.returnDate).length;
+  const over=borrowings.filter(b=>!b.returnDate&&isOverdue(b.dueDate)).length;
+  document.getElementById('borrow-sub').textContent=active+' ակտիվ · '+over+' ուշացած';
+}
+function renderBorrowings(){
+  const el=document.getElementById('borrow-list');
+  if(!borrowings.length){ el.innerHTML='<div class="empty">Վարձույթ չկա</div>'; return; }
+  el.innerHTML=[...borrowings].reverse().map(b=>{
+    let badge;
+    if(b.returnDate) badge=`<span class="badge bg">✓ Վերադ.</span>`;
+    else if(isOverdue(b.dueDate)) badge=`<span class="badge br">⚠ Ուշ</span>`;
+    else badge=`<span class="badge ba">${fmtDate(b.dueDate)}</span>`;
+    return `<div class="tbl-row" style="grid-template-columns:2fr 2fr 1fr 1fr 1fr">
+      <span style="font-weight:500">${getBookTitle(b.bookId)}</span>
+      <span style="color:#5A4A38">${getMemberName(b.memberId)}</span>
+      <span style="color:#9C8B6A;font-size:12px">${fmtDate(b.checkoutDate)}</span>
+      <span>${badge}</span>
+      <span style="color:#9C8B6A;font-size:12px">${b.returnDate?fmtDate(b.returnDate):'—'}</span>
+    </div>`;
+  }).join('');
+}
+
+// Rec member select
+function renderRecMemberSelect(){
+  const sel=document.getElementById('rec-member');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Ընտրել անդամ —</option>'+members.map(m=>`<option value="${m.id}" ${m.id===cur?'selected':''}>${m.name}</option>`).join('');
+}
+function recChanged(){
+  const id=document.getElementById('rec-member').value;
+  document.getElementById('rec-out').style.display='none';
+  const hx=document.getElementById('rec-history');
+  if(!id){ hx.style.display='none'; return; }
+  const mb=borrowings.filter(b=>b.memberId===id);
+  hx.style.display='block';
+  hx.textContent = mb.length===0?'Անդամն առայժմ որևէ գիրք չի վերցրել։':'Կարդացած՝ '+mb.map(b=>getBookTitle(b.bookId)).join(', ');
+}
+
+// ── Populates for Borrow / Return modals ─────────────────────────
+function populateBorrowSelects(){
+  const bs=document.getElementById('bw-book');
+  bs.innerHTML='<option value="">— Ընտրել —</option>'+
+    books.filter(b=>b.avail>0).map(b=>`<option value="${b.id}">${b.title} — ${b.author} (${b.avail} հատ)</option>`).join('');
+  const ms=document.getElementById('bw-member');
+  ms.innerHTML='<option value="">— Ընտրել —</option>'+members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  document.getElementById('bw-due').textContent=fmtDate(due14());
+}
+function populateReturnSelect(){
+  const active=borrowings.filter(b=>!b.returnDate);
+  const sel=document.getElementById('rt-borrow');
+  sel.innerHTML='<option value="">— Ընտրել —</option>'+
+    active.map(b=>`<option value="${b.id}">${getBookTitle(b.bookId)} · ${getMemberName(b.memberId)}${isOverdue(b.dueDate)?'  ⚠ ուշ':''}</option>`).join('');
+  sel.onchange=function(){
+    const bw=borrowings.find(b=>b.id===sel.value);
+    document.getElementById('rt-warn').style.display=(bw&&isOverdue(bw.dueDate,bw.returnDate))?'block':'none';
+  };
+}
+
+// ── Save actions ─────────────────────────────────────────────────
+function saveBook(){
+  const title=document.getElementById('b-title').value.trim();
+  const author=document.getElementById('b-author').value.trim();
+  if(!title||!author)return alert('Լրացրեք վերնագիրն ու հեղինակը։');
+  const copies=parseInt(document.getElementById('b-copies').value)||1;
+  books.push({id:uid(),title,author,
+    genre:document.getElementById('b-genre').value,
+    year:parseInt(document.getElementById('b-year').value)||0,
+    total:copies,avail:copies,
+    isbn:document.getElementById('b-isbn').value.trim()
   });
+  ['b-title','b-author','b-year','b-isbn'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('b-genre').value='';
+  document.getElementById('b-copies').value='1';
+  save(); closeModal('m-add-book'); renderAll();
 }
 
-function openAdmin() { document.getElementById('admin-panel').classList.add('open'); renderList(); }
-function closeAdmin() { document.getElementById('admin-panel').classList.remove('open'); }
-
-function showQR(id) {
-  document.getElementById('qr-modal-name').textContent = students[id];
-  const c = document.getElementById('qr-canvas');
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, 200, 200);
-  document.getElementById('qr-modal').classList.add('open');
-
-  const div = document.createElement('div');
-  div.style.display = 'none';
-  document.body.appendChild(div);
-  new QRCode(div, { text: id, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
-  setTimeout(() => {
-    const img = div.querySelector('img') || div.querySelector('canvas');
-    if (img) {
-      const tmp = new Image();
-      tmp.onload = () => { ctx.drawImage(tmp, 0, 0, 200, 200); };
-      tmp.src = img.tagName === 'CANVAS' ? img.toDataURL() : img.src;
-    }
-    document.body.removeChild(div);
-  }, 300);
+function saveMember(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name)return alert('Լրացրեք անունը։');
+  members.push({id:uid(),name,
+    email:document.getElementById('m-email').value.trim(),
+    phone:document.getElementById('m-phone').value.trim(),
+    joined:today()
+  });
+  ['m-name','m-email','m-phone'].forEach(id=>document.getElementById(id).value='');
+  save(); closeModal('m-add-member'); renderAll();
 }
 
-function closeQR() { document.getElementById('qr-modal').classList.remove('open'); }
-
-function playSound(type) {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.connect(g); g.connect(ctx.destination);
-  if (type === 'approved') {
-    o.frequency.setValueAtTime(523, ctx.currentTime);
-    o.frequency.setValueAtTime(659, ctx.currentTime + 0.15);
-    o.frequency.setValueAtTime(784, ctx.currentTime + 0.3);
-    g.gain.setValueAtTime(0.4, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-    o.start(); o.stop(ctx.currentTime + 0.8);
-  } else {
-    o.frequency.setValueAtTime(300, ctx.currentTime);
-    o.frequency.setValueAtTime(200, ctx.currentTime + 0.2);
-    g.gain.setValueAtTime(0.4, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    o.start(); o.stop(ctx.currentTime + 0.6);
-  }
+function saveBorrow(){
+  const bookId=document.getElementById('bw-book').value;
+  const memberId=document.getElementById('bw-member').value;
+  if(!bookId||!memberId)return alert('Ընտրեք գիրք և անդամ։');
+  borrowings.push({id:uid(),bookId,memberId,checkoutDate:today(),dueDate:due14(),returnDate:null});
+  const bk=books.find(b=>b.id===bookId);
+  if(bk) bk.avail--;
+  save(); closeModal('m-borrow'); renderAll();
 }
 
-function showResult(type, name) {
-  const box = document.getElementById('result-box');
-  box.className = 'result-box ' + type;
-  box.style.display = 'block';
-  if (type === 'approved') {
-    document.getElementById('result-icon').textContent = '✅';
-    document.getElementById('result-status').textContent = 'ՀԱՍՏԱՏՎԱԾ Է';
-    document.getElementById('result-name').textContent = name;
-    document.getElementById('result-detail').textContent = 'Բարի գալուստ դպրոց';
-  } else {
-    document.getElementById('result-icon').textContent = '❌';
-    document.getElementById('result-status').textContent = 'ՄԵՐԺՎԱԾ Է';
-    document.getElementById('result-name').textContent = 'Անհայտ QR կոդ';
-    document.getElementById('result-detail').textContent = 'Կապվեք ադմինիստրատորի հետ';
-  }
-  playSound(type);
-  setTimeout(() => { box.style.display = 'none'; scanning = true; }, 4000);
+function doReturn(){
+  const id=document.getElementById('rt-borrow').value;
+  if(!id)return alert('Ընտրեք վարձույթ։');
+  const bw=borrowings.find(b=>b.id===id);
+  if(!bw)return;
+  bw.returnDate=today();
+  const bk=books.find(b=>b.id===bw.bookId);
+  if(bk) bk.avail++;
+  save(); closeModal('m-return'); renderAll();
 }
 
-function processQR(data) {
-  const now = Date.now();
-  if (data === lastScan && now - lastScanTime < 5000) return;
-  lastScan = data; lastScanTime = now;
-  scanning = false;
-  if (students[data]) {
-    showResult('approved', students[data]);
-  } else {
-    showResult('rejected', '');
-  }
-}
-
-const video = document.getElementById('video');
-const canvas = document.getElementById('scan-canvas');
-const ctx = canvas.getContext('2d', { willReadFrequently: true });
-const lbl = document.getElementById('scan-label');
-
-async function startCamera() {
-  try {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: facingMode } }
+// ── AI Recommendation ────────────────────────────────────────────
+async function getRecommendation(){
+  const memberId=document.getElementById('rec-member').value;
+  if(!memberId)return;
+  const member=getMember(memberId);
+  const mb=borrowings.filter(b=>b.memberId===memberId);
+  const read=mb.map(b=>getBookTitle(b.bookId));
+  const allBks=books.map(b=>`"${b.title}" (${b.genre})`).join(', ');
+  const prompt=read.length>0
+    ?`Դուք գրադարանավար եք: ${member.name} անդամն արդեն կարդացել է ${read.join(', ')}: Հաշվի առնելով դա, խորհուրդ տվեք 3 գիրք մեր ֆոնդից (${allBks}) կամ ընդհանուր: Հայերեն, կարճ բացատրությամբ:`
+    :`Դուք գրադարանավար եք: ${member.name} անդամի պատմությունը հայտնի չէ: Խորհուրդ տվեք 3 հետաքրքիր գիրք ֆոնդից (${allBks}) կամ ընդհանուր: Հայերեն:`;
+  const out=document.getElementById('rec-out');
+  out.style.display='block';
+  out.innerHTML='<span class="ai-spin">✦ AI-ն մտածում է…</span>';
+  document.getElementById('rec-btn').disabled=true;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
     });
-    currentStream = stream;
-    video.srcObject = stream;
-    video.play();
-  } catch(e) {
-    lbl.textContent = '⚠ Սխալ: ' + e.message;
-  }
+    const data=await res.json();
+    out.textContent=data.content?.map(c=>c.text||'').join('')||'Չհաջողվեց ստանալ պատասխան:';
+  }catch{ out.textContent='Սխալ: Խնդրում ենք կրկին փորձել:'; }
+  document.getElementById('rec-btn').disabled=false;
 }
 
-async function flipCamera() {
-  facingMode = facingMode === 'user' ? 'environment' : 'user';
-  await startCamera();
-}
-
-async function scanLoop() {
-  if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0 && scanning) {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-
-    let found = false;
-
-    if ('BarcodeDetector' in window) {
-      try {
-        const detector = new BarcodeDetector({ formats: ['qr_code'] });
-        const codes = await detector.detect(canvas);
-        if (codes.length > 0) { processQR(codes[0].rawValue); found = true; }
-      } catch(e) {}
-    }
-
-    if (!found) {
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
-      if (code && code.data) { processQR(code.data); found = true; }
-    }
-
-    if (!found) lbl.textContent = '📷 Ուղղեք QR կոդին (' + canvas.width + 'x' + canvas.height + ')';
-  }
-  setTimeout(() => requestAnimationFrame(scanLoop), 200);
-}
-
-startCamera().then(() => {
-  video.addEventListener('playing', () => requestAnimationFrame(scanLoop), { once: true });
-});
+// ── Init ──────────────────────────────────────────────────────────
+load();
 </script>
 </body>
 </html>
